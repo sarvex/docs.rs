@@ -18,7 +18,7 @@ class EncodeHtmlEntities(sublime_plugin.TextCommand):
                         and ch_ord in cp2n
                         and not (ch in ('"', "'")
                         and view.match_selector(pt, 'string'))):
-                    ch = '&%s;' % cp2n[ch_ord]
+                    ch = f'&{cp2n[ch_ord]};'
 
                 buf.append(ch)
 

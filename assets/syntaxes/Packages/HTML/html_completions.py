@@ -3,16 +3,12 @@ import re
 
 
 def match(rex, str):
-    m = rex.match(str)
-    if m:
-        return m.group(0)
-    else:
-        return None
+    return m.group(0) if (m := rex.match(str)) else None
 
 def make_completion(tag):
     # make it look like
     # ("table\tTag", "table>$1</table>"),
-    return (tag + '\tTag', tag + '>$0</' + tag + '>')
+    return tag + '\tTag', f'{tag}>$0</{tag}>'
 
 def get_tag_to_attributes():
     """
@@ -148,26 +144,83 @@ def get_tag_to_attributes():
 
     # Assume that global attributes are common to all HTML elements
     global_attributes = [
-        'accesskey', 'class', 'contenteditable', 'contextmenu', 'dir',
-        'hidden', 'id', 'lang', 'style', 'tabindex', 'title', 'translate'
+        'accesskey',
+        'class',
+        'contenteditable',
+        'contextmenu',
+        'dir',
+        'hidden',
+        'id',
+        'lang',
+        'style',
+        'tabindex',
+        'title',
+        'translate',
+        'onabort',
+        'onautocomplete',
+        'onautocompleteerror',
+        'onauxclick',
+        'onblur',
+        'oncancel',
+        'oncanplay',
+        'oncanplaythrough',
+        'onchange',
+        'onclick',
+        'onclose',
+        'oncontextmenu',
+        'oncuechange',
+        'ondblclick',
+        'ondrag',
+        'ondragend',
+        'ondragenter',
+        'ondragexit',
+        'ondragleave',
+        'ondragover',
+        'ondragstart',
+        'ondrop',
+        'ondurationchange',
+        'onemptied',
+        'onended',
+        'onerror',
+        'onfocus',
+        'oninput',
+        'oninvalid',
+        'onkeydown',
+        'onkeypress',
+        'onkeyup',
+        'onload',
+        'onloadeddata',
+        'onloadedmetadata',
+        'onloadstart',
+        'onmousedown',
+        'onmouseenter',
+        'onmouseleave',
+        'onmousemove',
+        'onmouseout',
+        'onmouseover',
+        'onmouseup',
+        'onmousewheel',
+        'onpause',
+        'onplay',
+        'onplaying',
+        'onprogress',
+        'onratechange',
+        'onreset',
+        'onresize',
+        'onscroll',
+        'onseeked',
+        'onseeking',
+        'onselect',
+        'onshow',
+        'onsort',
+        'onstalled',
+        'onsubmit',
+        'onsuspend',
+        'ontimeupdate',
+        'ontoggle',
+        'onvolumechange',
+        'onwaiting',
     ]
-
-    # Extend `global_attributes` by the event handler attributes
-    global_attributes.extend([
-        'onabort', 'onautocomplete', 'onautocompleteerror', 'onauxclick', 'onblur',
-        'oncancel', 'oncanplay', 'oncanplaythrough', 'onchange', 'onclick',
-        'onclose', 'oncontextmenu', 'oncuechange', 'ondblclick', 'ondrag',
-        'ondragend', 'ondragenter', 'ondragexit', 'ondragleave', 'ondragover',
-        'ondragstart', 'ondrop', 'ondurationchange', 'onemptied', 'onended',
-        'onerror', 'onfocus', 'oninput', 'oninvalid', 'onkeydown',
-        'onkeypress', 'onkeyup', 'onload', 'onloadeddata', 'onloadedmetadata',
-        'onloadstart', 'onmousedown', 'onmouseenter', 'onmouseleave',
-        'onmousemove', 'onmouseout', 'onmouseover', 'onmouseup',
-        'onmousewheel', 'onpause', 'onplay', 'onplaying', 'onprogress',
-        'onratechange', 'onreset', 'onresize', 'onscroll', 'onseeked',
-        'onseeking', 'onselect', 'onshow', 'onsort', 'onstalled', 'onsubmit',
-        'onsuspend', 'ontimeupdate', 'ontoggle', 'onvolumechange', 'onwaiting'
-    ])
 
     for attributes in tag_dict.values():
         attributes.extend(global_attributes)
@@ -243,7 +296,7 @@ class HtmlTagCompletions(sublime_plugin.EventListener):
 
         # if the opening < is not here insert that
         if ch != '<':
-            completion_list = [(pair[0], '<' + pair[1]) for pair in completion_list]
+            completion_list = [(pair[0], f'<{pair[1]}') for pair in completion_list]
 
         flags = 0
         if is_inside_tag:
@@ -276,9 +329,7 @@ class HtmlTagCompletions(sublime_plugin.EventListener):
         ])
 
         for tag in normal_tags:
-            default_list.append(make_completion(tag))
-            default_list.append(make_completion(tag.upper()))
-
+            default_list.extend((make_completion(tag), make_completion(tag.upper())))
         default_list += ([
             ('a\tTag', 'a href=\"$1\">$0</a>'),
             ('area\tTag', 'area shape=\"$1\" coords=\"$2\" href=\"$3\">'),
@@ -351,7 +402,7 @@ class HtmlTagCompletions(sublime_plugin.EventListener):
         search_start = max(0, pt - SEARCH_LIMIT - len(prefix))
         line = view.substr(sublime.Region(search_start, pt + SEARCH_LIMIT))
 
-        line_head = line[0:pt - search_start]
+        line_head = line[:pt - search_start]
         line_tail = line[pt - search_start:]
 
         # find the tag from end of line_head
@@ -360,12 +411,12 @@ class HtmlTagCompletions(sublime_plugin.EventListener):
         space_index = len(line_head)
         while i >= 0:
             c = line_head[i]
-            if c == '<':
+            if c == ' ':
+                space_index = i
+            elif c == '<':
                 # found the open tag
                 tag = line_head[i + 1:space_index]
                 break
-            elif c == ' ':
-                space_index = i
             i -= 1
 
         # check that this tag looks valid
@@ -377,23 +428,21 @@ class HtmlTagCompletions(sublime_plugin.EventListener):
         suffix = '>'
 
         for c in line_tail:
-            if c == '>':
-                # found end tag
-                suffix = ''
-                break
-            elif c == '<':
+            if c == '<':
                 # found another open tag, need to close this one
                 break
 
+            elif c == '>':
+                # found end tag
+                suffix = ''
+                break
         if suffix == '' and not line_tail.startswith(' ') and not line_tail.startswith('>'):
             # add a space if not there
             suffix = ' '
 
         # got the tag, now find all attributes that match
         attributes = self.tag_to_attributes.get(tag, [])
-        # ("class\tAttr", "class="$1">"),
-        attri_completions = [(a + '\tAttr', a + '="$1"' + suffix) for a in attributes]
-        return attri_completions
+        return [(a + '\tAttr', f'{a}="$1"{suffix}') for a in attributes]
 
 
 # unit testing

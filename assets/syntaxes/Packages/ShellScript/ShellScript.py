@@ -17,12 +17,11 @@ class RunShellScriptCommand(Default.exec.ExecCommand):
 
         # Determine the shell to run
         firstline = view.substr(view.line(0))
-        match = re.match(r"\s*#!(.+)", firstline)
-        if match:
+        if match := re.match(r"\s*#!(.+)", firstline):
             # Note: we split on whitespace and turn it
             # into a list, otherwise things like
             # "/usr/bin/env bash" won't work
-            shell = shlex.split(match.group(1))
+            shell = shlex.split(match[1])
         else:
             # No shebang line... Take the user's default shell
             shell = [os.environ["SHELL"]]
@@ -34,9 +33,8 @@ class RunShellScriptCommand(Default.exec.ExecCommand):
 
         # Determine the environment variables
         env = copy.deepcopy(os.environ)
-        custom_env = kwargs.get("env", None)
-        if custom_env:
-            env.update(custom_env)
+        if custom_env := kwargs.get("env", None):
+            env |= custom_env
 
         # Delegate to the super class
         super().run(cmd=shell + [file_name],

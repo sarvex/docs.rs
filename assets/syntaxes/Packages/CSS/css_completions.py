@@ -453,24 +453,20 @@ class CSSCompletions(sublime_plugin.EventListener):
         # match inside the style attribute of HTML tags, incl. just before the quote that closes the attribute value
         css_selector_scope = "source.css - meta.selector.css"
         html_style_attr_selector_scope = "text.html meta.attribute-with-value.style.html " + \
-                                    "string.quoted - punctuation.definition.string.begin.html"
-        selector_scope = css_selector_scope + ', ' + html_style_attr_selector_scope
-        prop_name_scope = "meta.property-name.css"
+                                        "string.quoted - punctuation.definition.string.begin.html"
+        selector_scope = f'{css_selector_scope}, {html_style_attr_selector_scope}'
         prop_value_scope = "meta.property-value.css"
         loc = locations[0]
 
         # When not inside CSS, don’t trigger
-        if not view.match_selector(loc, selector_scope):
-            # if the text immediately after the caret is a HTML style tag beginning, and the character before the
-            # caret matches the CSS scope, then probably the user is typing here (where | represents the caret):
-            # <style type="text/css">.test { f|</style>
-            # i.e. after a "style" HTML open tag and immediately before the closing tag.
-            # so we want to offer CSS completions here.
-            if view.match_selector(loc, 'text.html meta.tag.style.end punctuation.definition.tag.begin.html') and \
-               view.match_selector(loc - 1, selector_scope):
-                pass
-            else:
-                return []
+        if not view.match_selector(loc, selector_scope) and (
+            not view.match_selector(
+                loc,
+                'text.html meta.tag.style.end punctuation.definition.tag.begin.html',
+            )
+            or not view.match_selector(loc - 1, selector_scope)
+        ):
+            return []
 
         if not self.props:
             self.props = parse_css_data()
@@ -486,9 +482,8 @@ class CSSCompletions(sublime_plugin.EventListener):
             alt_loc = loc - len(prefix)
             line = view.substr(sublime.Region(view.line(alt_loc).begin(), alt_loc))
 
-            match = re.search(self.regex, line)
-            if match:
-                prop_name = match.group(1)
+            if match := re.search(self.regex, line):
+                prop_name = match[1]
                 if prop_name in self.props:
                     values = self.props[prop_name]
 
@@ -510,11 +505,12 @@ class CSSCompletions(sublime_plugin.EventListener):
 
             return None
         else:
+            prop_name_scope = "meta.property-name.css"
             add_colon = not view.match_selector(loc, prop_name_scope)
 
             for prop in self.props:
                 if add_colon:
-                    l.append((prop + "\tproperty", prop + ": "))
+                    l.append((prop + "\tproperty", f"{prop}: "))
                 else:
                     l.append((prop + "\tproperty", prop))
 

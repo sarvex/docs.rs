@@ -56,16 +56,14 @@ class DiffFilesCommand(sublime_plugin.WindowCommand):
 
         diff = difflib.unified_diff(a, b, files[1], files[0], adate, bdate)
 
-        difftxt = u"".join(line for line in diff)
-
-        if difftxt == "":
-            sublime.status_message("Files are identical")
-        else:
+        if difftxt := u"".join(diff):
             v = self.window.new_file()
-            v.set_name(os.path.basename(files[1]) + " -> " + os.path.basename(files[0]))
+            v.set_name(f"{os.path.basename(files[1])} -> {os.path.basename(files[0])}")
             v.set_scratch(True)
             v.assign_syntax('Packages/Diff/Diff.sublime-syntax')
             v.run_command('append', {'characters': difftxt, 'disable_tab_translation': True})
+        else:
+            sublime.status_message("Files are identical")
 
     def is_visible(self, files):
         return len(files) == 2
@@ -95,9 +93,9 @@ class DiffChangesCommand(sublime_plugin.TextCommand):
         bdate = time.ctime()
 
         diff = difflib.unified_diff(a, b, fname, fname, adate, bdate)
-        difftxt = u"".join(line for line in diff)
+        difftxt = u"".join(diff)
 
-        if difftxt == "":
+        if not difftxt:
             sublime.status_message("No changes")
             return
 
@@ -105,7 +103,7 @@ class DiffChangesCommand(sublime_plugin.TextCommand):
 
         if use_buffer:
             v = self.view.window().new_file()
-            v.set_name("Unsaved Changes: " + os.path.basename(self.view.file_name()))
+            v.set_name(f"Unsaved Changes: {os.path.basename(self.view.file_name())}")
             v.set_scratch(True)
             v.assign_syntax('Packages/Diff/Diff.sublime-syntax')
         else:

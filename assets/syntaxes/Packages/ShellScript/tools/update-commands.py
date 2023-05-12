@@ -5,8 +5,7 @@ import os
 
 
 def main():
-    parent = "scope:source.shell.{}#".format(
-        os.path.splitext(sys.argv[1])[0].split("-")[-1])
+    parent = f'scope:source.shell.{os.path.splitext(sys.argv[1])[0].split("-")[-1]}#'
     with open(sys.argv[1], "r") as stream:
         commands_input = yaml.load(stream)
     main = []
@@ -17,9 +16,9 @@ def main():
         "scope": r"keyword.operator.end-of-options.shell",
         "set": [
             {"meta_content_scope": r"meta.function-call.arguments.shell"},
-            {"include": parent + r"expansion-and-string"},
-            {"include": parent + r"line-continuation-or-pop-at-end"}
-        ]
+            {"include": f"{parent}expansion-and-string"},
+            {"include": f"{parent}line-continuation-or-pop-at-end"},
+        ],
     }
     opt_end_boundary = r"(?=\s|;|$|`|\))"
     for command, value in commands_input.items():
@@ -33,8 +32,8 @@ def main():
         allow_eoo = value.get("allow-end-of-options-token", True)
         scope = value.get("scope", None)
         if not scope:
-            scope = "support.function.{}.shell".format(command)
-        scope = "meta.function-call.shell " + scope
+            scope = f"support.function.{command}.shell"
+        scope = f"meta.function-call.shell {scope}"
         cmd_args_base = []
         cmd_args = []
         cmd_args_bt = []
@@ -59,11 +58,11 @@ def main():
         thelist = []
         opts = ""
         if short_options:
-            opts += "[" + short_options + "]"
+            opts += f"[{short_options}]"
         if short_options_compact:
             if opts:
                 opts += "|"
-            opts += "[" + short_options_compact + "]+"
+            opts += f"[{short_options_compact}" + "]+"
         if opts:
             if short_option_prefixes:
                 prefix = "|".join(short_option_prefixes)
@@ -90,33 +89,40 @@ def main():
             cmd_args_base.append(thedict)
         if thelist:
             cmd_args_base.extend(thelist)
-        cmd_args.append({"meta_scope": "meta.function-call.arguments.shell"})
-        cmd_args.append({"include": parent + r"cmd-args-boilerplate"})
-        cmd_args_bt.append({
-            "meta_scope": "meta.function-call.arguments.shell"})
-        cmd_args_bt.append({"include": parent + r"cmd-args-boilerplate-bt"})
-        if len(cmd_args_base) > 0:
-            cmd_args.append({"include": "cmd-args-{}-base".format(command)})
-            cmd_args_bt.append({"include": "cmd-args-{}-base".format(command)})
-            contexts["cmd-args-{}-base".format(command)] = cmd_args_base
+        cmd_args.extend(
+            (
+                {"meta_scope": "meta.function-call.arguments.shell"},
+                {"include": parent + r"cmd-args-boilerplate"},
+            )
+        )
+        cmd_args_bt.extend(
+            (
+                {"meta_scope": "meta.function-call.arguments.shell"},
+                {"include": parent + r"cmd-args-boilerplate-bt"},
+            )
+        )
+        if cmd_args_base:
+            cmd_args.append({"include": f"cmd-args-{command}-base"})
+            cmd_args_bt.append({"include": f"cmd-args-{command}-base"})
+            contexts[f"cmd-args-{command}-base"] = cmd_args_base
         cmd_args = [{"match": "", "set": cmd_args}]
         cmd_args_bt = [{"match": "", "set": cmd_args_bt}]
-        contexts["cmd-args-{}".format(command)] = cmd_args
-        contexts["cmd-args-{}-bt".format(command)] = cmd_args_bt
-        main.append({
-            "match": match,
-            "scope": scope,
-            "set": [
-                "{}cmd-post".format(parent),
-                "cmd-args-{}".format(command)]
-        })
-        main_bt.append({
-            "match": match,
-            "scope": scope,
-            "set": [
-                "{}cmd-post".format(parent),
-                "cmd-args-{}-bt".format(command)]
-        })
+        contexts[f"cmd-args-{command}"] = cmd_args
+        contexts[f"cmd-args-{command}-bt"] = cmd_args_bt
+        main.append(
+            {
+                "match": match,
+                "scope": scope,
+                "set": [f"{parent}cmd-post", f"cmd-args-{command}"],
+            }
+        )
+        main_bt.append(
+            {
+                "match": match,
+                "scope": scope,
+                "set": [f"{parent}cmd-post", f"cmd-args-{command}-bt"],
+            }
+        )
     contexts["prototype"] = [{
         "include": parent + r"prototype"
     }]
